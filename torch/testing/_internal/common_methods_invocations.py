@@ -4049,7 +4049,7 @@ def sample_inputs_xlogy(op, device, dtype, requires_grad, **kwargs):
             make_arg((2,3))
             ]
 
-    # x is scalar gives error
+    # x is scalar gives error TODO
     # for x in (0.,2.,3.):
     #     yield SampleInput(x, args=make_arg((2,3)))
 
