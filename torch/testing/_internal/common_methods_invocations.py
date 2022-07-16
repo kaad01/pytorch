@@ -21,7 +21,7 @@ from torchgen.utils import dataclass_repr
 from torch.testing import make_tensor
 from torch.testing._internal.common_dtype import (
     _dispatch_dtypes, floating_types, floating_types_and, complex_types, floating_and_complex_types,
-    floating_and_complex_types_and, all_types_and_complex_and, all_types_and, all_types_and_complex, integral_types_and,
+   floating_and_complex_types_and, all_types_and_complex_and, all_types_and, all_types_and_complex, integral_types_and,
     all_types, double_types, empty_types, complex_types_and, integral_types
 )
 from torch.testing._internal.common_device_type import \
@@ -4036,6 +4036,30 @@ def sample_inputs_comparison_ops(op, device, dtype, requires_grad, **kwargs):
 
     lhs = make_arg((S, S))
     yield SampleInput(lhs, args=(lhs.clone(),))
+
+def sample_inputs_xlogy(op, device, dtype, requires_grad, **kwargs):
+    yield from sample_inputs_elementwise_binary(op, device, dtype, requires_grad, **kwargs)
+
+    # Adds a sample input where y is either the scalar 0 or a 0 tensor
+    make_arg = partial(torch.tensor, device=device, dtype=dtype, requires_grad=requires_grad)
+
+    # y Cases
+    cases = [
+            torch.zeros([2,3], dtype=dtype,device=device,requires_grad=requires_grad),
+            make_arg((2,3))
+            ]
+
+    # x is scalar gives error
+    # for x in (0.,2.,3.):
+    #     yield SampleInput(x, args=make_arg((2,3)))
+
+    for x in cases:
+        # y is scalar
+        for y in (0.,2.,3.):
+            yield SampleInput(x, args=y)
+        # y is tensor
+        for y in cases:
+            yield SampleInput(x, args=y)
 
 def sample_inputs_stack(op_info, device, dtype, requires_grad, **kwargs):
     make_arg = partial(make_tensor, device=device, dtype=dtype, requires_grad=requires_grad)
@@ -17540,11 +17564,12 @@ op_db: List[OpInfo] = [
            sample_inputs_func=sample_unsqueeze),
     BinaryUfuncInfo('xlogy',
                     aliases=('special.xlogy',),
-                    dtypes=all_types_and(torch.bool, torch.half, torch.bfloat16),
+                    dtypes=all_types_and(torch.half, torch.bfloat16),
                     promotes_int_to_float=True,
                     supports_forward_ad=True,
                     supports_fwgrad_bwgrad=True,
                     supports_one_python_scalar=True,
+                    sample_inputs_func=sample_inputs_xlogy,
                     skips=(
                         # nan vs nan comparisons
                         # https://github.com/pytorch/pytorch/issues/74279
